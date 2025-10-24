@@ -1,0 +1,5 @@
+{
+  "name": "Blender 3D AI Assistant",
+  "description": "An AI-powered chatbot to help university students with their Blender 3D assignments. It provides step-by-step instructions in Spanish, referencing Blender commands in English, based on official documentation.",
+  "requestFramePermissions": []
+}
