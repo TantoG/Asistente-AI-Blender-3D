@@ -25,3 +25,10 @@ dist-ssr
 .env
 # Environment variables
 .env
+
+# Media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg

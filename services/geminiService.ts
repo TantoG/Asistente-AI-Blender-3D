@@ -48,9 +48,9 @@ export async function sendMessageToGemini(chat: Chat, message: string): Promise<
 
         return { text, sources };
     } catch (error) {
-        console.error("Error sending message to Gemini:", error);
+        console.error("Error sending message to Gemini:", JSON.stringify(error, null, 2));
         return { 
-            text: "Lo siento, ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.",
+            text: "Lo siento, ocurrió un error al procesar tu solicitud. Por favor, revisa la consola del navegador para más detalles.",
             sources: [] 
         };
     }
