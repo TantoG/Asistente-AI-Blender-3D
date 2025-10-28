@@ -29,6 +29,14 @@ const SourceIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const ExerciseIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15.09 10.11A5 5 0 1 1 8.91 4H8a5 5 0 0 0-1 9.9" />
+        <path d="M12 15v5" />
+        <path d="M12 21h0" />
+        <path d="M10 18h4" />
+    </svg>
+);
 
 // Helper function to render text with backticks as styled code
 const renderMessageText = (text: string) => {
@@ -55,6 +63,7 @@ const Chatbot: React.FC = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isExerciseMode, setIsExerciseMode] = useState(false);
     const chatSession = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +86,16 @@ const Chatbot: React.FC = () => {
         setIsLoading(true);
 
         if (chatSession.current) {
-            const { text, sources } = await sendMessageToGemini(chatSession.current, currentInput);
+            let { text, sources } = await sendMessageToGemini(chatSession.current, currentInput);
+            
+            if (text.startsWith('[MODO_EJERCICIO_ACTIVADO]')) {
+                setIsExerciseMode(true);
+                text = text.replace('[MODO_EJERCICIO_ACTIVADO]', '').trim();
+            } else if (text.startsWith('[MODO_EJERCICIO_DESACTIVADO]')) {
+                setIsExerciseMode(false);
+                text = text.replace('[MODO_EJERCICIO_DESACTIVADO]', '').trim();
+            }
+
             const modelMessage: Message = { role: 'model', text, sources };
             setMessages(prev => [...prev, modelMessage]);
         }
@@ -86,8 +104,28 @@ const Chatbot: React.FC = () => {
 
     }, [input, isLoading]);
 
+    const handleToggleExerciseMode = () => {
+        setIsExerciseMode(prev => !prev);
+    };
+
     return (
         <div className="w-full max-w-3xl h-[80vh] flex flex-col bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden">
+             <div className="p-4 border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm flex justify-between items-center rounded-t-2xl flex-shrink-0">
+                <h2 className="text-lg font-semibold text-gray-200">Asistente de Blender</h2>
+                <button 
+                    onClick={handleToggleExerciseMode}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                        isExerciseMode 
+                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 ring-green-400' 
+                        : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                    }`}
+                    title={isExerciseMode ? 'Salir del Modo Ejercicio' : 'Activar Modo Ejercicio'}
+                >
+                    <ExerciseIcon className="w-4 h-4" />
+                    <span>Modo Ejercicio</span>
+                     <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isExerciseMode ? 'bg-white' : 'bg-gray-400'}`}></div>
+                </button>
+            </div>
             <div className="flex-grow p-6 overflow-y-auto space-y-6">
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
