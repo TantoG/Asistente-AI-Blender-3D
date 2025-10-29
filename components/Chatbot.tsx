@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { type Message } from '../types';
 import { createChatSession, sendMessageToGemini } from '../services/geminiService';
@@ -38,6 +37,13 @@ const ExerciseIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const GlossaryIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </svg>
+);
+
 // Helper function to render text with backticks as styled code
 const renderMessageText = (text: string) => {
     const parts = text.split(/(`[^`]+`)/g);
@@ -64,6 +70,7 @@ const Chatbot: React.FC = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isExerciseMode, setIsExerciseMode] = useState(false);
+    const [isGlossaryMode, setIsGlossaryMode] = useState(false);
     const chatSession = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -88,15 +95,26 @@ const Chatbot: React.FC = () => {
         if (chatSession.current) {
             let { text, sources } = await sendMessageToGemini(chatSession.current, currentInput);
             
-            if (text.startsWith('[MODO_EJERCICIO_ACTIVADO]')) {
+            if (text.includes('[MODO_EJERCICIO_ACTIVADO]')) {
                 setIsExerciseMode(true);
-                text = text.replace('[MODO_EJERCICIO_ACTIVADO]', '').trim();
-            } else if (text.startsWith('[MODO_EJERCICIO_DESACTIVADO]')) {
+                setIsGlossaryMode(false);
+                text = text.replace(/\[MODO_EJERCICIO_ACTIVADO\]/g, '').trim();
+            }
+            if (text.includes('[MODO_EJERCICIO_DESACTIVADO]')) {
                 setIsExerciseMode(false);
-                text = text.replace('[MODO_EJERCICIO_DESACTIVADO]', '').trim();
+                text = text.replace(/\[MODO_EJERCICIO_DESACTIVADO\]/g, '').trim();
+            }
+            if (text.includes('[MODO_GLOSARIO_ACTIVADO]')) {
+                setIsGlossaryMode(true);
+                setIsExerciseMode(false);
+                text = text.replace(/\[MODO_GLOSARIO_ACTIVADO\]/g, '').trim();
+            }
+            if (text.includes('[MODO_GLOSARIO_DESACTIVADO]')) {
+                setIsGlossaryMode(false);
+                text = text.replace(/\[MODO_GLOSARIO_DESACTIVADO\]/g, '').trim();
             }
 
-            const modelMessage: Message = { role: 'model', text, sources };
+            const modelMessage: Message = { role: 'model', text: text.trim(), sources };
             setMessages(prev => [...prev, modelMessage]);
         }
         
@@ -105,26 +123,57 @@ const Chatbot: React.FC = () => {
     }, [input, isLoading]);
 
     const handleToggleExerciseMode = () => {
-        setIsExerciseMode(prev => !prev);
+        const nextState = !isExerciseMode;
+        setIsExerciseMode(nextState);
+        if (nextState) {
+            setIsGlossaryMode(false);
+        }
+    };
+
+    const handleToggleGlossaryMode = () => {
+        const nextState = !isGlossaryMode;
+        setIsGlossaryMode(nextState);
+        if (nextState) {
+            setIsExerciseMode(false);
+        }
     };
 
     return (
         <div className="w-full max-w-3xl h-[80vh] flex flex-col bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden">
              <div className="p-4 border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm flex justify-between items-center rounded-t-2xl flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-200">Asistente de Blender</h2>
-                <button 
-                    onClick={handleToggleExerciseMode}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
-                        isExerciseMode 
-                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 ring-green-400' 
-                        : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                    }`}
-                    title={isExerciseMode ? 'Salir del Modo Ejercicio' : 'Activar Modo Ejercicio'}
-                >
-                    <ExerciseIcon className="w-4 h-4" />
-                    <span>Modo Ejercicio</span>
-                     <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isExerciseMode ? 'bg-white' : 'bg-gray-400'}`}></div>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={handleToggleGlossaryMode}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                            isGlossaryMode 
+                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 ring-purple-400' 
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
+                        title={isGlossaryMode ? 'Salir del Modo Glosario' : 'Activar Modo Glosario'}
+                    >
+                        <GlossaryIcon className="w-4 h-4" />
+                        <span>GLOSARIO</span>
+                        <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isGlossaryMode ? 'bg-white' : 'bg-gray-400'}`}></div>
+                    </button>
+                    <button 
+                        onClick={handleToggleExerciseMode}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                            isExerciseMode 
+                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 ring-green-400' 
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
+                        title={isExerciseMode ? 'Salir del Modo Ejercicio' : 'Activar Modo Ejercicio'}
+                    >
+                        {isExerciseMode ? (
+                            <span className="text-sm leading-none -mt-0.5" aria-label="computer icon">💻</span>
+                        ) : (
+                            <ExerciseIcon className="w-4 h-4" />
+                        )}
+                        <span>Modo Ejercicio</span>
+                        <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isExerciseMode ? 'bg-white' : 'bg-gray-400'}`}></div>
+                    </button>
+                </div>
             </div>
             <div className="flex-grow p-6 overflow-y-auto space-y-6">
                 {messages.map((msg, index) => (
